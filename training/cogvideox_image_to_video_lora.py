@@ -712,7 +712,8 @@ def main(args):
 
     for epoch in range(first_epoch, args.num_train_epochs):
         transformer.train()
-
+        avg_loss = 0
+        first_step = True
         for step, batch in enumerate(train_dataloader):
             models_to_accumulate = [transformer]
 
@@ -825,6 +826,7 @@ def main(args):
                 accelerator.backward(loss)
 
                 if accelerator.sync_gradients:
+                    # print("syncing gradients")
                     gradient_norm_before_clip = get_gradient_norm(transformer.parameters())
                     accelerator.clip_grad_norm_(transformer.parameters(), args.max_grad_norm)
                     gradient_norm_after_clip = get_gradient_norm(transformer.parameters())
@@ -876,7 +878,15 @@ def main(args):
                     run_validation(args, accelerator, transformer, scheduler, model_config, weight_dtype)
 
             last_lr = lr_scheduler.get_last_lr()[0] if lr_scheduler is not None else args.learning_rate
-            logs = {"loss": loss.detach().item(), "lr": last_lr}
+
+            loss_log_interval =  10
+            
+            if global_step % loss_log_interval == 0 or first_step:
+                logs = {"loss": avg_loss / loss_log_interval, "lr": last_lr}
+                avg_loss = 0
+                first_step = False
+            else:
+                avg_loss += loss.detach().item()
             # gradnorm + deepspeed: https://github.com/microsoft/DeepSpeed/issues/4555
             if accelerator.distributed_type != DistributedType.DEEPSPEED:
                 logs.update(

@@ -77,7 +77,7 @@ def _get_dataset_args(parser: argparse.ArgumentParser) -> None:
         "--frame_buckets",
         nargs="+",
         type=int,
-        default=[49],
+        default=[8,9,12,16,20,24,28,32,36,40,44,48,49,52,56,60,64,68,72,76,80,84,88,92,96,100],
         help="CogVideoX1.5 need to guarantee that ((num_frames - 1) // self.vae_scale_factor_temporal + 1) % patch_size_t != 0, such as 53"
     )
     parser.add_argument(
